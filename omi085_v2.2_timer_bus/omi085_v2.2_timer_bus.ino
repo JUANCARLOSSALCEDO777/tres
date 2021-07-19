@@ -1,5 +1,4 @@
-// PRUEBA DE GIT: OMAR
-// Ahí va otra prueba
+
 ////////////  SHUNT   ////////////////
 
 #include <Wire.h>
@@ -36,6 +35,7 @@ long int Voltage_Paso[4]={0,0,0,0}; //en volts
 long int Secret[2]={0,0}; // datos para k secret  Tiempo y K
 long int Status=0;
 volatile int K_PASOS[4]={0,0,0,0};
+
 ////////////  NEXTION   ////////////////
 
 int char1, char2;
@@ -48,6 +48,8 @@ bool ampere_state = 0;       // Variable para leer el amperaje.
 bool getk_state=0;
 double k1=0.00;
 int BussData[18];
+int graph_volt;
+
 ////////////  POT   ////////////////
 
 int unoIC=10;
@@ -138,7 +140,7 @@ void loop() {
       Serial.print("char1=");
       Serial.println(char1);
       if(char1==0xFE)                                   // FE Hex= 254 DEC   //nibble de instruccion , (leer bus)
-      {                                               
+      {                                               //Máscara 0x71 =  valor numérico
        
         Serial.println("BussData: ");
         BussData[0]=char1;
@@ -311,21 +313,23 @@ if(k_set==true) {
  
    amperLect=1000*amperaje1;
    voltajeLect=3*amperaje2;
+   graph_volt=voltajeLect*255/9000;
 //ACONDICIONAMIENTO DE VARIABLES A NEXTION// 
 
 //ENVIO DE SEÑALES//
-//
-//  Serial.print("xV.val=");//indicador nextion
-//  Serial.print(voltajeLect);
-//    ff();
-//
-//  Serial.print("add 17,0,");//indicador nextion
-//  Serial.print(voltajeLect*255*(0.000111)); //255/(9x1000)
-//   ff();
-//
-//  Serial.print("xA.val=");//indicador nextion
-//  Serial.print(amperLect);
-//    ff();
+
+  Serial.print("xV.val=");//indicador nextion
+  Serial.print(voltajeLect);
+    ff();
+
+  
+  Serial.print("add 17,0,");//indicador nextion
+  Serial.print(graph_volt); // voltjeLect*255/(9x1000)
+   ff();
+
+  Serial.print("xA.val=");//indicador nextion
+  Serial.print(amperLect);
+    ff();
 
 //ENVIO DE SEÑALES//
 
