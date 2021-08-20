@@ -35,6 +35,7 @@ long int Voltage_Paso[4]={0,0,0,0}; //en volts
 long int Secret[2]={0,0}; // datos para k secret  Tiempo y K
 long int Status=0;
 volatile int K_PASOS[4]={0,0,0,0};
+volatile int PedalEstado=0;
 
 ////////////  NEXTION   ////////////////
 
@@ -48,7 +49,7 @@ bool ampere_state = 0;       // Variable para leer el amperaje.
 bool getk_state=0;
 double k1=0.00;
 int BussData[18];
-int graph_volt;
+
 
 ////////////  POT   ////////////////
 
@@ -188,7 +189,8 @@ void loop() {
             Serial.println(Secret[1]);
             Serial.println(" STATUS ");
             Serial.println(Status);
-                                                                              //acondicionamiento para timers
+                ff();//LIMPIADOR DE BUFFER
+                                                                                      //acondicionamiento para timers
              Enteros[0]=CalcEnteros(Tiempo_Paso[0]);
              Residuo[0]=CalcResiduo(Tiempo_Paso[0]);
              Enteros[1]=CalcEnteros(Tiempo_Paso[1]);
@@ -216,14 +218,20 @@ void loop() {
 //////////// INICIALIZACION DE PASOS  ////////////
 if(Status==1 && k_set==false){
     N_PASO=0;   
-    repetidor=0; 
-  
+    repetidor=0;
+ 
+     //Timer1.restart();
+             
+            Serial.print("res 0 = ");
+            Serial.println(Residuo[0]);
+             Serial.print("ent 0 = ");
+            Serial.println(Enteros[0]);
     
      if(Enteros[0]==0){Timer1.initialize(Residuo[0]); Paso_fin=1;}
      if(Enteros[0]!=0){Timer1.initialize(8000000); Paso_fin=0;}
      if(Enteros[0]==1 && Residuo[0]==0){Timer1.initialize(8000000); Paso_fin=1;}
      if(Enteros[0]>1){Timer1.initialize(8000000); Paso_fin=0;}
-    
+
     for(int i = 0; i<=3; i++) {
       v=Voltage_Paso[i]/10;
       k1 =(v -0.1)/0.1217241;
@@ -261,6 +269,7 @@ if(Status==3 && k_set==false){
        repetidor=0; 
        Enteros[0]=CalcEnteros(Secret[0]);
        Residuo[0]=CalcResiduo(Secret[0]);
+     
      if(Enteros[0]==0){Timer1.initialize(Residuo[0]); Paso_fin=1;}
      if(Enteros[0]!=0){Timer1.initialize(8000000); Paso_fin=0;}
      if(Enteros[0]==1 && Residuo[0]==0){Timer1.initialize(8000000); Paso_fin=1;}
@@ -313,7 +322,7 @@ if(k_set==true) {
  
    amperLect=1000*amperaje1;
    voltajeLect=3*amperaje2;
-   graph_volt=voltajeLect*255/9000;
+   
 //ACONDICIONAMIENTO DE VARIABLES A NEXTION// 
 
 //ENVIO DE SEÑALES//
@@ -321,11 +330,6 @@ if(k_set==true) {
   Serial.print("xV.val=");//indicador nextion
   Serial.print(voltajeLect);
     ff();
-
-  
-  Serial.print("add 17,0,");//indicador nextion
-  Serial.print(graph_volt); // voltjeLect*255/(9x1000)
-   ff();
 
   Serial.print("xA.val=");//indicador nextion
   Serial.print(amperLect);
@@ -335,72 +339,29 @@ if(k_set==true) {
 
 
   }
-  
+  if(PedalEstado >= 1){            //necesario fuera de la funcion interrupt por tener recomendaciones de NO usar serial en una interrupción
+    ff();
+    Serial.print("click START,1");
+    ff();
+    Serial.print("click START,0");
+    ff();
+    PedalEstado=0;
+  }
 }
 
 
 
 //////////////////////INCIO DE FUNCIONES///////////////////////////////////////////////////////
-void bajar_getkstate() {
-  if (Serial.available()>1)                             // Si llegaron 2 datos al menos 
-  {                                                   // (0)
-    char1=Serial.read();                              // Lee un byte del puerto serie 
-    if(char1==0x71)                                   // (1)
-      {                                               //Máscara 0x71 =  valor numérico
-      char2=Serial.read();                            // Lee el segundo byte de la trama, va2.val
-      
-      Serial.print("char2: ");
-      Serial.println(char2);
-      
-        if(char2==106){ // Si es terminar get k
-        getk_state=0;
-        }
 
-        if(char2>=0 && char2<=100) // Si se introduce un valor de k (0 a 100)
-        {
-        k=char2;
-        }
-    }
-  }
-}
 
 void pedalFunc(){
 
-    Serial.print("click START,1");
-    ff();
-    Serial.print("click START,0");
-    ff();
-    
-}
-void bajar_amperstate() {
-  if (Serial.available()>1)                             // Si llegaron 2 datos al menos 
-  {                                                   // (0)
-    char1=Serial.read();                              // Lee un byte del puerto serie 
-    if(char1==0x71)                                   // (1)
-      {                                               //Máscara 0x71 =  valor numérico
-      char2=Serial.read();                            // Lee el segundo byte de la trama, va2.val
-      
-      Serial.print("char2: ");
-      Serial.println(char2);
-      
-       if(char2==102){ // Si es terminar (START NEXTION) (4)
-        //  Serial.println("Botón START apagado");
-          ampere_state = 0;
 
-          //BAJAR POT
-          for(int i = 0; i<=99; i++)
-          {
-            Down(unoIC, dosUD);
-            delay(10);
-          }
-          Serial.println("DOWN");
-          DatoNextion=false;
-          amper_shunt2next();
-         // Serial.print("click START,0");
-         // ff();
-        } // (4)
-      }
-    }
+PedalEstado=PedalEstado+1;
+for (int i = 0; i <= 20; i++) {     // tiempo para evitar MULTIPLE interrupcion de rebote tipo activacion-ejecucion activacion ejecucion (200ms)
+  delayMicroseconds(10000);
+  }
+EIFR = 0x01;  // eliminacion de cola de interrupcion por rebote, por esto genereba 2 uno en ejecucion , otro en cola del mismo tipo.
 }
 
 
@@ -410,17 +371,11 @@ void ff(){
   Serial.write(0xff); 
   Serial.write(0xff); 
   Serial.write(0xff);
+
 }
 
 
 
-void amper_shunt2next(){
-
-  Serial.print("x1.val=");
-  Serial.print(DatoNextion);
-  ff();
-  
-}
 ///////////////////////////INICIO FUNCIONES PARA TIMER //////////////////////////
 void Temporizador(void)
 {
@@ -467,6 +422,7 @@ void Temporizador(void)
                  }
                 if(N_PASO==4){
                   Timer1.stop(); 
+                  //Timer1.restart();
                   for(int i = 0; i<=99; i++)                                                     //for de bajar
                   {
                    digitalWrite(12, LOW);
@@ -477,6 +433,7 @@ void Temporizador(void)
                   }
                   k_set=false;
                   Status=0;
+                     
                 }
                 repetidor=0;
               }
