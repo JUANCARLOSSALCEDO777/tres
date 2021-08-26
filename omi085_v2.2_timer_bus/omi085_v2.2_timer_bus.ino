@@ -37,6 +37,7 @@ long int Status=0;
 volatile int K_PASOS[4]={0,0,0,0};
 volatile int PedalEstado=0;
 
+unsigned long ultima_hora=0;
 ////////////  NEXTION   ////////////////
 
 int char1, char2;
@@ -219,18 +220,9 @@ void loop() {
 if(Status==1 && k_set==false){
     N_PASO=0;   
     repetidor=0;
+    Status=5;  // evita reactivaciones por desfase nextion 
  
-     //Timer1.restart();
-             
-            Serial.print("res 0 = ");
-            Serial.println(Residuo[0]);
-             Serial.print("ent 0 = ");
-            Serial.println(Enteros[0]);
-    
-     if(Enteros[0]==0){Timer1.initialize(Residuo[0]); Paso_fin=1;}
-     if(Enteros[0]!=0){Timer1.initialize(8000000); Paso_fin=0;}
-     if(Enteros[0]==1 && Residuo[0]==0){Timer1.initialize(8000000); Paso_fin=1;}
-     if(Enteros[0]>1){Timer1.initialize(8000000); Paso_fin=0;}
+
 
     for(int i = 0; i<=3; i++) {
       v=Voltage_Paso[i]/10;
@@ -257,25 +249,25 @@ if(Status==1 && k_set==false){
     }
      Serial.println(" inicie paso 0");  
       k_set=true;
-
+      ultima_hora=millis();
 
   }
+
 //////////// FIN INICIALIZACION DE PASOS  ////////////  
-
-
+if(k_set==true){
+  pasos_millis();
+}
 ///////////INICIALIZACION DE KS/////////////
 if(Status==3 && k_set==false){
+       Status=5;// evita reactivaciones por desfase nextion 
        N_PASO=0;   
        repetidor=0; 
-       Enteros[0]=CalcEnteros(Secret[0]);
-       Residuo[0]=CalcResiduo(Secret[0]);
-     
-     if(Enteros[0]==0){Timer1.initialize(Residuo[0]); Paso_fin=1;}
-     if(Enteros[0]!=0){Timer1.initialize(8000000); Paso_fin=0;}
-     if(Enteros[0]==1 && Residuo[0]==0){Timer1.initialize(8000000); Paso_fin=1;}
-     if(Enteros[0]>1){Timer1.initialize(8000000); Paso_fin=0;}
+       Tiempo_Paso[0]=Secret[0];
+       
+
+   
                                                                                       
-       for(int i = 0; i<=99; i++)                                                     //for de bajar
+       for(int i = 0; i<=99; i++)                                                         //for de bajar
        {
          digitalWrite(12, LOW);
          digitalWrite(10, HIGH);
@@ -292,11 +284,25 @@ if(Status==3 && k_set==false){
        }
        Serial.println(" inicie paso 0 de ks");  
 
-
-       
   k_set=true;
+  ultima_hora=millis();
   }
-
+  
+if(Status==0 && k_set==true){   //apagado forzado
+   k_set=false;
+   for(int i = 0; i<=99; i++)                                                         //for de bajar
+       {
+         digitalWrite(12, LOW);
+         digitalWrite(10, HIGH);
+         digitalWrite(13, LOW);
+         digitalWrite(10, LOW);
+       }
+  
+  Serial.print("xV.val=0");//indicador nextion            //            reseteo de valores en pantalla
+    ff();
+  Serial.print("xA.val=0");//indicador nextion
+    ff();
+  }
 
 
 
@@ -352,13 +358,59 @@ if(k_set==true) {
 
 
 //////////////////////INCIO DE FUNCIONES///////////////////////////////////////////////////////
+void pasos_millis(){
+  
+  unsigned long hora_actual = millis();
 
+  if(hora_actual-ultima_hora > Tiempo_Paso[N_PASO]*1000){
+    //n paso subir
+    Serial.print("Acabe PASO ");Serial.println(N_PASO);
+    N_PASO=N_PASO +1;
+    //poner k
+ for(int i = 0; i<=99; i++)                                                                    //for de bajar
+    {
+     digitalWrite(12, LOW);
+     digitalWrite(10, HIGH);
+     digitalWrite(13, LOW);
+     digitalWrite(10, LOW);
+
+    }
+    
+    for(int i = 0; i<K_PASOS[N_PASO]; i++)                                                       // for de subir
+    {
+        digitalWrite(13, LOW);
+        digitalWrite(12, HIGH);
+        digitalWrite(10, HIGH);
+        digitalWrite(10, LOW);
+    }
+    
+    //ultima hora modificar
+    ultima_hora=hora_actual;
+    //poner kset en false al acabar paso4
+     if(N_PASO==4){
+      for(int i = 0; i<=99; i++)                                                                    //for de bajar
+    {
+     digitalWrite(12, LOW);
+     digitalWrite(10, HIGH);
+     digitalWrite(13, LOW);
+     digitalWrite(10, LOW);
+
+    }
+    Serial.print("xV.val=0");//indicador nextion            //            reseteo de valores en pantalla
+    ff();
+    Serial.print("xA.val=0");//indicador nextion
+    ff();
+      k_set=false;
+      }
+    }
+  
+  }
 
 void pedalFunc(){
 
 
 PedalEstado=PedalEstado+1;
-for (int i = 0; i <= 20; i++) {     // tiempo para evitar MULTIPLE interrupcion de rebote tipo activacion-ejecucion activacion ejecucion (200ms)
+for (int i = 0; i <= 50; i++) {     // tiempo para evitar MULTIPLE interrupcion de rebote tipo activacion-ejecucion activacion ejecucion (200ms)
   delayMicroseconds(10000);
   }
 EIFR = 0x01;  // eliminacion de cola de interrupcion por rebote, por esto genereba 2 uno en ejecucion , otro en cola del mismo tipo.
@@ -377,66 +429,8 @@ void ff(){
 
 
 ///////////////////////////INICIO FUNCIONES PARA TIMER //////////////////////////
-void Temporizador(void)
-{
-// Serial.print("rep: ");
-// Serial.print(repetidor);
-// Serial.print("   numero de paso:  ");
-// Serial.print(N_PASO);
-// Serial.print("   Paso_fin:  ");
-// Serial.println(Paso_fin);
+void Temporizador(void){
 
-              repetidor++;
-              if(repetidor+1==Enteros[N_PASO]&& Enteros[N_PASO] > 0 && Paso_fin==0 && Residuo[N_PASO]==0){   //**
-              Timer1.setPeriod(8000000); Paso_fin=1; repetidor=0;
-              }
-              
-              if(repetidor==Enteros[N_PASO]&& Enteros[N_PASO] > 0 && Paso_fin==0 ){
-              Timer1.setPeriod(Residuo[N_PASO]); Paso_fin=1; repetidor=0;
-              }
-         
-              if(Paso_fin==1 && repetidor==1){
-                Serial.print("Acabe PASO ");Serial.println(N_PASO);
-                if( Enteros[N_PASO+1]==0){Timer1.setPeriod(Residuo[N_PASO+1]);}//posible poner paso fin =1;
-                if (Enteros[N_PASO+1]>0){Timer1.setPeriod(8000000); Paso_fin=0;}
-                if (Enteros[N_PASO+1]==1 && Residuo[N_PASO+1]==0){Timer1.setPeriod(8000000); Paso_fin=1;} //*
-                N_PASO++;
-                for(int i = 0; i<=99; i++)                                                     //for de bajar
-                {
-                 digitalWrite(12, LOW);
-                 digitalWrite(10, HIGH);
-                 digitalWrite(13, LOW);
-                 digitalWrite(10, LOW);
-                }
-                 
-                 for(int i = 0; i<=K_PASOS[N_PASO]; i++)                                                       // for de subir
-                 {
-                   digitalWrite(13, LOW);
-                   digitalWrite(12, HIGH);
-                   digitalWrite(10, HIGH);
-                   digitalWrite(10, LOW);
-                 }
-                 if(N_PASO<4){
-                   Serial.print(" K:  ");
-                   Serial.println(K_PASOS[N_PASO]);
-                 }
-                if(N_PASO==4){
-                  Timer1.stop(); 
-                  //Timer1.restart();
-                  for(int i = 0; i<=99; i++)                                                     //for de bajar
-                  {
-                   digitalWrite(12, LOW);
-                   digitalWrite(10, HIGH);
-                   digitalWrite(13, LOW);
-                   digitalWrite(10, LOW);
-                 
-                  }
-                  k_set=false;
-                  Status=0;
-                     
-                }
-                repetidor=0;
-              }
  }
 
 
