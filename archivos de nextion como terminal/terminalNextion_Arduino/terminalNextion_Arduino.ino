@@ -11,7 +11,7 @@ void loop() {
 
 
 void NextTerminal(String texto) {
-Serial.print("v1.txt="+texto);
+Serial.print("v1.txt="+texto);        //  no se ha probado , pero puede que este mal esta metodologia de concatenacion de strings
 ff();
 Serial.print("click b1,1");
 ff();
