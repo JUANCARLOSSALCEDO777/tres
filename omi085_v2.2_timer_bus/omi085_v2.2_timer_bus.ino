@@ -68,9 +68,8 @@ void setup() {
   
   Serial.begin(9600);
    ///////////////INICIO TIMER INTERRUPTOR CONFIGURACIÓN ////////////////  
-                                                             //Configura el TIMER en MICROSEGUNDOS , MAXIMO 8.38 SEG APROX USAR 8 
-   Timer1.attachInterrupt(Temporizador);                     //Configura la interrupción del Timer 1
-   Timer1.stop();
+                                                             //Configura el TIMER en MICROSEGUNDOS , MAXIMO 8.38 SEG APROX USAR 8    //Configura la interrupción del Timer 1
+
  /////////////// FIN  TIMER INTERRUPTOR CONFIGURACIÓN  ////////////////  
 
 ////////////  INICIO ADC CONFIGURACIÓN  ////////////////
@@ -116,102 +115,21 @@ void setup() {
           }
 ///INTERRUPCION///////////////       
 attachInterrupt(digitalPinToInterrupt(2),pedalFunc,RISING);
-///INTERRUPCION///////////////   
-
+///INTERRUPCION///////////////  
+///NEXTION SISTEMA DE RESPUESTA//// 
+delay(3000);
+  Serial.print("bkcmd=0");//
+    ff();
+///NEXTION SISTEMA DE RESPUESTA//// 
 }
 
 
 void loop() {
  
 ////////////  NEXTION   ////////////////
-//CAMBIAR POR INTERRUPT  /// checar en funciones
-//   if (digitalRead(buttonPin) == HIGH && ampere_state== 0) {
-//    Serial.print("click START,1");
-//    ff();
-//    delay(500);
-//    Serial.print("click START,0");
-//    ff();
-//    delay(500);
-//    }
-//CAMBIAR POR INTERRUPT
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////LECTURA DE BUS INICIO/////////////
- if (Serial.available()>1)                           // Si llegaron 2 datos al menos 
-  {                                                  // (0)
-      Serial.println("Serial aviable");
-      char1=Serial.read();                              // Lee un byte del puerto serie 
-      Serial.print("char1=");
-      Serial.println(char1);
-      if(char1==0xFE)                                   // FE Hex= 254 DEC   //nibble de instruccion , (leer bus)
-      {                                               //Máscara 0x71 =  valor numérico
-       
-        Serial.println("BussData: ");
-        BussData[0]=char1;
-        Serial.println(BussData[0]);
-        for(int i=1;i<18;i++)
-        {
-          BussData[i]=Serial.read();
-          if(BussData[i]==-1)
-          {
-            i--;
-          }
-        }
-       
-       for(int i=1;i<18;i++)
-       {
-        Serial.println(BussData[i]);
-       }
-       if(BussData[17]==0xFD)              // FD Hex= 253 DEC
-        {
-          Serial.println("Terminó el buffer correctamente");                    //ACONDIcionamiento de datos 
-          for (int i=1;i<=4;i++){                                              //ojo uso de datos de 1 a 8
-            Tiempo_Paso[i-1]=BussData[i]*(60)+BussData[i+4];                   //tiempo de Paso a segundos y guardados
-            } 
-          for (int i=9;i<=12;i++){
-            Voltage_Paso[i-9]=BussData[i];
-            }
-            Status=BussData[13];
-            Secret[0]=BussData[14]*(60)+BussData[15];                         // tiempo en seg de ks
-            Secret[1]=BussData[16];                                                   // ks   IMPORTANTE LA K MAS ALTA USABLE ES 87 , A 10.59, A MAS K NO AUMENTARA  CADA K =0.1217241V +0.1 VERIFICADO 
-
-            Serial.println("Datos almacenados ");
-            Serial.println("tiempos de pasos en seg");
-            Serial.println(Tiempo_Paso[0]);
-            Serial.println(Tiempo_Paso[1]);
-            Serial.println(Tiempo_Paso[2]);
-            Serial.println(Tiempo_Paso[3]);
-            Serial.println("voltajes de pasos ");
-            Serial.println(Voltage_Paso[0]);
-            Serial.println(Voltage_Paso[1]);
-            Serial.println(Voltage_Paso[2]);
-            Serial.println(Voltage_Paso[3]);
-            Serial.println("tiempo ks ");
-            Serial.println(Secret[0]);
-            Serial.println(" ks ");
-            Serial.println(Secret[1]);
-            Serial.println(" STATUS ");
-            Serial.println(Status);
-                ff();//LIMPIADOR DE BUFFER
-                                                                                      //acondicionamiento para timers
-             Enteros[0]=CalcEnteros(Tiempo_Paso[0]);
-             Residuo[0]=CalcResiduo(Tiempo_Paso[0]);
-             Enteros[1]=CalcEnteros(Tiempo_Paso[1]);
-             Residuo[1]=CalcResiduo(Tiempo_Paso[1]);
-             Enteros[2]=CalcEnteros(Tiempo_Paso[2]);
-             Residuo[2]=CalcResiduo(Tiempo_Paso[2]);
-             Enteros[3]=CalcEnteros(Tiempo_Paso[3]);
-             Residuo[3]=CalcResiduo(Tiempo_Paso[3]);
-
-        }
-        if(BussData[17]!=0xFD){Serial.println(" No se completo la comunicación ->error de comunicación.");}
-        
-       }   
-       if(char1!=0xFE){ Serial.println(" Inicializador no reconocido ->error de comunicación.");}
-       
-   while(Serial.available()){
-    Serial.read(); 
-     }
-  
-   }
+ 
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////LECTURA DE BUS FINAL/////////////  
    
  
@@ -364,7 +282,7 @@ void pasos_millis(){
 
   if(hora_actual-ultima_hora > Tiempo_Paso[N_PASO]*1000){
     //n paso subir
-    Serial.print("Acabe PASO ");Serial.println(N_PASO);
+    Serial.println(" ");Serial.print("Acabe PASO ");Serial.println(N_PASO);
     N_PASO=N_PASO +1;
     //poner k
  for(int i = 0; i<=99; i++)                                                                    //for de bajar
@@ -429,8 +347,93 @@ void ff(){
 
 
 ///////////////////////////INICIO FUNCIONES PARA TIMER //////////////////////////
-void Temporizador(void){
+void serialEvent(){
+if (Serial.available()>1)                           // Si llegaron 2 datos al menos 
+  {                                                  // (0)
+      Serial.println("Serial aviable");
+      char1=Serial.read();                              // Lee un byte del puerto serie 
+      Serial.print("char1=");
+      Serial.println(char1);
+      if(char1==0xFE)                                   // FE Hex= 254 DEC   //nibble de instruccion , (leer bus)
+      {                                               //Máscara 0x71 =  valor numérico
+       
+        Serial.println("BussData: ");
+        BussData[0]=char1;
+        Serial.println(BussData[0]);
+        for(int i=1;i<18;i++)
+        {
+          BussData[i]=Serial.read();
+          if(BussData[i]==-1)
+          {
+            i--;
+          }
+        }
+       
+       for(int i=1;i<18;i++)
+       {
+        Serial.println(BussData[i]);
+       }
+       if(BussData[17]==0xFD)              // FD Hex= 253 DEC
+        {
+          Serial.println("Terminó el buffer correctamente");                    //ACONDIcionamiento de datos 
+          for (int i=1;i<=4;i++){                                              //ojo uso de datos de 1 a 8
+            Tiempo_Paso[i-1]=BussData[i]*(60)+BussData[i+4];                   //tiempo de Paso a segundos y guardados
+            } 
+          for (int i=9;i<=12;i++){
+            Voltage_Paso[i-9]=BussData[i];
+            }
+            Status=BussData[13];
+            Secret[0]=BussData[14]*(60)+BussData[15];                         // tiempo en seg de ks
+            Secret[1]=BussData[16];                                                   // ks   IMPORTANTE LA K MAS ALTA USABLE ES 87 , A 10.59, A MAS K NO AUMENTARA  CADA K =0.1217241V +0.1 VERIFICADO 
 
+            Serial.println("Datos almacenados ");
+            Serial.println("tiempos de pasos en seg");
+            Serial.println(Tiempo_Paso[0]);
+            Serial.println(Tiempo_Paso[1]);
+            Serial.println(Tiempo_Paso[2]);
+            Serial.println(Tiempo_Paso[3]);
+            Serial.println("voltajes de pasos ");
+            Serial.println(Voltage_Paso[0]);
+            Serial.println(Voltage_Paso[1]);
+            Serial.println(Voltage_Paso[2]);
+            Serial.println(Voltage_Paso[3]);
+            Serial.println("tiempo ks ");
+            Serial.println(Secret[0]);
+            Serial.println(" ks ");
+            Serial.println(Secret[1]);
+            Serial.println(" STATUS ");
+            Serial.println(Status);
+                ff();//LIMPIADOR DE BUFFER
+                                                                                      //acondicionamiento para timers
+             Enteros[0]=CalcEnteros(Tiempo_Paso[0]);
+             Residuo[0]=CalcResiduo(Tiempo_Paso[0]);
+             Enteros[1]=CalcEnteros(Tiempo_Paso[1]);
+             Residuo[1]=CalcResiduo(Tiempo_Paso[1]);
+             Enteros[2]=CalcEnteros(Tiempo_Paso[2]);
+             Residuo[2]=CalcResiduo(Tiempo_Paso[2]);
+             Enteros[3]=CalcEnteros(Tiempo_Paso[3]);
+             Residuo[3]=CalcResiduo(Tiempo_Paso[3]);
+
+        }
+        if(BussData[17]!=0xFD){Serial.println(" No se completo la comunicación ->error de comunicación.");}
+        
+       }   
+       if(char1!=0xFE){ Serial.println(" Inicializador no reconocido ->error de comunicación.");}
+       
+
+        char1=Serial.read();                              // Lee un byte del puerto serie 
+      Serial.print("revision extra 1 ");
+      Serial.println(char1);
+              char1=Serial.read();                              // Lee un byte del puerto serie 
+      Serial.print("revision extra 2 ");
+      Serial.println(char1);
+              char1=Serial.read();                              // Lee un byte del puerto serie 
+      Serial.print("revision extra 3 ");
+      Serial.println(char1);
+              char1=Serial.read();                              // Lee un byte del puerto serie 
+      Serial.print("revision extra 4 ");
+      Serial.println(char1);
+   }
  }
 
 
