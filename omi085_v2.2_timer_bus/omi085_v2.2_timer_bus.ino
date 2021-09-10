@@ -132,14 +132,16 @@ void loop() {
  
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////LECTURA DE BUS FINAL/////////////  
    
+
+
  
 
 //////////// INICIALIZACION DE PASOS  ////////////
-if(Status==1 && k_set==false){
+if(Status==1 && k_set==false){                           
     N_PASO=0;   
     repetidor=0;
     Status=5;  // evita reactivaciones por desfase nextion 
- 
+
 
 
     for(int i = 0; i<=3; i++) {
@@ -148,6 +150,10 @@ if(Status==1 && k_set==false){
       k1=round(k1);
       K_PASOS[i]=k1;                                                                          //conversion forzada
     }        
+//     K_PASOS[0]=10;                          //por prueba
+//     K_PASOS[1]=30;
+//     K_PASOS[2]=50;
+//     K_PASOS[3]=85;
     
     for(int i = 0; i<=99; i++)                                                                    //for de bajar
     {
@@ -193,7 +199,7 @@ if(Status==3 && k_set==false){
          digitalWrite(10, LOW);
        }
        
-       for(int i = 0; i<=Secret[1]; i++)                                                       // for de subir
+       for(int i = 0; i<Secret[1]; i++)                                                       // for de subir // se cambio el condicionante para pruebas
        {
          digitalWrite(13, LOW);
          digitalWrite(12, HIGH);
@@ -239,12 +245,13 @@ if(k_set==true) {
   //ads.setGain(GAIN_ONE);        //+/- 4.096V muy al limite
   ads.setGain(GAIN_TWOTHIRDS);  //  2/3x gain +/- 6.144V pero no usar mas de 5.3v
   bits_canal_2=ads.readADC_Differential_2_3();
+   
   amperaje2=(-1)*bits_canal_2*0.1875;//mv ganancia x1 resolución  voltaje/3 (mv)
 //--------LECTURA VOLTIMETRO---------------
 
 //ACONDICIONAMIENTO DE VARIABLES A NEXTION//  
  
-   amperLect=1000*amperaje1;
+   amperLect=10*amperaje1;
    voltajeLect=3*amperaje2;
    
 //ACONDICIONAMIENTO DE VARIABLES A NEXTION// 
